@@ -15,13 +15,11 @@ services:
       - /app/node_modules
     depends_on:
       - mongo # Memastikan service mongo berjalan sebelum backend dimulai
-    environment:
-      # Variabel lingkungan yang akan digunakan oleh aplikasi
-      - PORT=3001
-      - DB_URI=mongodb://mongo:27017/py1
+    env_file:
+      - ./backend/.env # Menggunakan file .env di dalam folder backend
     # Menggunakan nodemon untuk auto-restart saat ada perubahan file
     # Perintah ini akan menimpa CMD di Dockerfile
-    command: npx nodemon index.js
+    command: npx ts-node-dev --respawn --transpile-only src/index.ts
 
   # Service untuk Database (MongoDB)
   mongo:
