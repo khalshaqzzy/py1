@@ -38,7 +38,7 @@ export const register = async (req: Request, res: Response) => {
     const user: IUser = new User({ username, password });
     await user.save();
 
-    const token = generateToken(user._id.toString());
+    const token = generateToken((user as any)._id.toString());
 
     res.status(201).json({ token });
 
@@ -74,8 +74,7 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Username atau password salah.' });
     }
 
-    const token = generateToken(user._id.toString());
-
+    const token = generateToken((user as any)._id.toString());
     res.json({ token });
 
   } catch (error) {
