@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { register, login } from '../controllers/auth.controller';
+import { register, login, getMe } from '../controllers/auth.controller';
+import { protect } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -16,5 +17,12 @@ router.post('/register', register);
  * @access  Public
  */
 router.post('/login', login);
+
+/**
+ * @route   GET /api/auth/me
+ * @desc    Mengambil data pengguna yang sedang login
+ * @access  Protected
+ */
+router.get('/me', protect, getMe);
 
 export default router;

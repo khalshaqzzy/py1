@@ -1,0 +1,38 @@
+# Docker Compose untuk Deployment HTTP
+version: '3.8'
+
+services:
+  # Service Nginx sebagai Reverse Proxy
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:80" # Map port 8080 di host ke 80 di container
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+
+  # Service untuk Backend
+  backend:
+    build:
+      context: . # Konteks build sekarang adalah direktori backend
+    # Port 3001 tidak perlu diekspos ke host, hanya perlu diakses oleh nginx
+    volumes:
+      - .:/app
+      - /app/node_modules # Pastikan node_modules di container tidak tertimpa
+    depends_on:
+      - mongo
+    env_file:
+      - ./.env
+    command: sh -c "npm run build && npm run seed && npm start"
+
+  # Service untuk Database (MongoDB)
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

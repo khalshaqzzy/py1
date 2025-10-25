@@ -129,3 +129,28 @@ export const getSession = async (req: IRequest, res: Response) => {
     res.status(500).json({ message: errorMessage });
   }
 };
+
+/**
+ * @route   GET /api/sessions/active
+ * @desc    Mengambil semua sesi aktif (in-progress) milik pengguna
+ * @access  Protected
+ */
+export const getActiveSessions = async (req: IRequest, res: Response) => {
+  const userId = req.user?.id;
+
+  try {
+    const activeSessions = await Session.find({
+      userId: userId,
+      status: 'in-progress',
+    }).sort({ startTime: -1 }); // Urutkan dari yang terbaru
+
+    res.json(activeSessions);
+
+  } catch (error) {
+    let errorMessage = 'Terjadi kesalahan pada server saat mengambil sesi aktif.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    res.status(500).json({ message: errorMessage });
+  }
+};

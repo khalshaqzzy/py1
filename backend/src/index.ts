@@ -2,6 +2,13 @@ import dotenv from 'dotenv';
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+// Routes
+import authRoutes from './routes/auth.routes';
+import contentRoutes from './routes/content.routes';
+import sessionRoutes from './routes/session.routes';
+import submissionRoutes from './routes/submission.routes';
+import leaderboardRoutes from './routes/leaderboard.routes';
+import userRoutes from './routes/user.routes';
 
 dotenv.config();
 
@@ -24,19 +31,14 @@ mongoose.connect(dbURI)
   .then(() => console.log('Berhasil terhubung ke MongoDB...'))
   .catch(err => console.error('Gagal terhubung ke MongoDB:', err));
 
-// Routes
-import authRoutes from './routes/auth.routes';
-import contentRoutes from './routes/content.routes';
-import sessionRoutes from './routes/session.routes';
-import submissionRoutes from './routes/submission.routes';
-import leaderboardRoutes from './routes/leaderboard.routes';
+
 app.use('/api/auth', authRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/submit', submissionRoutes);
 app.use('/api/leaderboards', leaderboardRoutes);
+app.use('/api/user', userRoutes);
 
-// Route sederhana untuk testing
 app.get('/', (req: Request, res: Response) => {
   res.send('Server Py1 berjalan!');
 });

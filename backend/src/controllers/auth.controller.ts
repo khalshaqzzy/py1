@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { IRequest } from '../middleware/auth.middleware';
 import User, { IUser } from '../models/user.model';
 import jwt from 'jsonwebtoken';
 
@@ -83,5 +84,22 @@ export const login = async (req: Request, res: Response) => {
       errorMessage = error.message;
     }
     res.status(500).json({ message: errorMessage });
+  }
+};
+
+/**
+ * @route   GET /api/auth/me
+ * @desc    Mengambil data pengguna yang sedang login
+ * @access  Protected
+ */
+export const getMe = async (req: IRequest, res: Response) => {
+  try {
+    const user = await User.findById(req.user?.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'Pengguna tidak ditemukan.' });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Kesalahan Server" });
   }
 };
