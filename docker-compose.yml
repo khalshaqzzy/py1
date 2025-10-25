@@ -11,8 +11,6 @@ services:
     volumes:
       # Mount source code untuk live-reloading saat development
       - ./backend:/app
-      # Volume anonim untuk node_modules agar tidak tertimpa oleh host
-      - /app/node_modules
     depends_on:
       - mongo # Memastikan service mongo berjalan sebelum backend dimulai
     env_file:

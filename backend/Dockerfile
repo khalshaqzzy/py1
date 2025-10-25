@@ -1,5 +1,6 @@
 # Builder Stage
 FROM node:lts-alpine AS builder 
+RUN apk add --no-cache python3
 WORKDIR /app 
 
 # Salin file definisi dependensi 
@@ -17,6 +18,7 @@ RUN npm run build
 # Dependencies Stage
 # Tahap ini hanya fokus untuk menginstal Prod Dependencies 
 FROM node:lts-alpine AS dependencies 
+RUN apk add --no-cache python3
 WORKDIR /app 
 
 # Salin file definisi dependencies 
@@ -27,6 +29,7 @@ RUN npm install --production
 
 # Production Stage
 FROM node:lts-alpine AS production 
+RUN apk add --no-cache python3
 WORKDIR /app 
 
 # Salin prod dependencies dari 'Dependencies Strage'

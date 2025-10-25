@@ -1,19 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Menambahkan properti 'user' ke interface Request dari Express
-declare global {
-  namespace Express {
-    interface Request {
-      user?: string | object; // ID user atau objek user yang sudah di-decode
-    }
-  }
+// Interface untuk payload JWT yang sudah di-decode
+export interface IDecodedUser {
+  id: string;
+  iat: number;
+  exp: number;
+}
+
+// Interface kustom untuk Request yang menyertakan properti 'user'
+export interface IRequest extends Request {
+  user?: IDecodedUser;
 }
 
 /**
  * Middleware untuk memproteksi rute dengan verifikasi JWT.
  */
-export const protect = (req: Request, res: Response, next: NextFunction) => {
+export const protect = (req: IRequest, res: Response, next: NextFunction) => {
   let token;
 
   // Cek header Authorization untuk Bearer token
@@ -28,12 +31,12 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
         throw new Error('JWT_SECRET tidak ditemukan di environment variables.');
       }
 
-      const decoded = jwt.verify(token, secret);
+      const decoded = jwt.verify(token, secret) as IDecodedUser;
 
-      // Tambahkan data user yang sudah di-decode
+      // Tambahkan data user yang sudah di-decode ke request
       req.user = decoded;
 
-      next(); 
+      next();
     } catch (error) {
       console.error('Token verification failed:', error);
       res.status(401).json({ message: 'Tidak terautentikasi, token gagal.' });

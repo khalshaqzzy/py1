@@ -26,7 +26,15 @@ mongoose.connect(dbURI)
 
 // Routes
 import authRoutes from './routes/auth.routes';
+import contentRoutes from './routes/content.routes';
+import sessionRoutes from './routes/session.routes';
+import submissionRoutes from './routes/submission.routes';
+import leaderboardRoutes from './routes/leaderboard.routes';
 app.use('/api/auth', authRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/submit', submissionRoutes);
+app.use('/api/leaderboards', leaderboardRoutes);
 
 // Route sederhana untuk testing
 app.get('/', (req: Request, res: Response) => {
