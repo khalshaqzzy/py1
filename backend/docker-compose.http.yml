@@ -16,9 +16,6 @@ services:
     build:
       context: . # Konteks build sekarang adalah direktori backend
     # Port 3001 tidak perlu diekspos ke host, hanya perlu diakses oleh nginx
-    volumes:
-      - .:/app
-      - /app/node_modules # Pastikan node_modules di container tidak tertimpa
     depends_on:
       - mongo
     env_file:

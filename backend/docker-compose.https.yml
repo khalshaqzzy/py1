@@ -26,9 +26,6 @@ services:
   backend:
     build:
       context: .
-    volumes:
-      - .:/app
-      - /app/node_modules
     depends_on:
       - mongo
     env_file:
