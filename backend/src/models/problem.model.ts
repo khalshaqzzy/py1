@@ -24,7 +24,6 @@ const TestCaseSchema = new Schema<ITestCase>({
   },
   expectedOutput: {
     type: String,
-    required: true,
   },
   isExample: {
     type: Boolean,
