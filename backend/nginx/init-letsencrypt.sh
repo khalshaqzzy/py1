@@ -1,12 +1,12 @@
 #!/bin/bash
-if ! [ -x "$(command -v docker-compose)" ]; then
-  echo 'Error: docker-compose is not installed.' >&2
+if ! docker compose version &> /dev/null; then
+  echo 'Error: docker compose is not installed or not in the PATH.' >&2
   exit 1
 fi
 
-domains=(domain.com www.domain.com) # Diubah
+domains=(khalshaqzzy.site www.khalshaqzzy.site)
 rsa_key_size=4096
-email="email@domain.com" # Ubah
+email="khalshaqzzy@gmail.com"
 data_path="./data/certbot"
 
 if [ -d "$data_path" ]; then
@@ -25,26 +25,25 @@ if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ] || [ ! -e "$data_path/conf/
   echo
 fi
 
-echo "### Creating dummy certificate for $domains ..."
-path="/etc/letsencrypt/live/$domains"
-mkdir -p "$data_path/conf/live/$domains"
-docker-compose -f docker-compose.https.yml run --rm --entrypoint \
-  "openssl req -x509 -nodes -newkey rsa:1024 -days 1\
-    -keyout '$$path/privkey.pem' \
-    -out '$$path/fullchain.pem' \
+echo "### Creating dummy certificate for khalshaqzzy.site ..."
+mkdir -p "$data_path/conf/live/khalshaqzzy.site"
+docker compose -f docker-compose.https.yml run --rm --entrypoint \
+  "openssl req -x509 -nodes -newkey rsa:2048 -days 1\
+    -keyout '/etc/letsencrypt/live/khalshaqzzy.site/privkey.pem' \
+    -out '/etc/letsencrypt/live/khalshaqzzy.site/fullchain.pem' \
     -subj '/CN=localhost'" certbot
 echo
 
 
 echo "### Starting nginx ..."
-docker-compose -f docker-compose.https.yml up --force-recreate -d nginx
+docker compose -f docker-compose.https.yml up --force-recreate -d nginx
 echo
 
-echo "### Deleting dummy certificate for $domains ..."
-docker-compose -f docker-compose.https.yml run --rm --entrypoint \
-  "rm -Rf /etc/letsencrypt/live/$domains && \
-   rm -Rf /etc/letsencrypt/archive/$domains && \
-   rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
+echo "### Deleting dummy certificate for khalshaqzzy.site ..."
+docker compose -f docker-compose.https.yml run --rm --entrypoint \
+  "rm -Rf /etc/letsencrypt/live/khalshaqzzy.site && \
+   rm -Rf /etc/letsencrypt/archive/khalshaqzzy.site && \
+   rm -Rf /etc/letsencrypt/renewal/khalshaqzzy.site.conf" certbot
 echo
 
 
@@ -60,7 +59,7 @@ case "$email" in
 esac
 
 staging_arg=""
-docker-compose -f docker-compose.https.yml run --rm --entrypoint \
+docker compose -f docker-compose.https.yml run --rm --entrypoint \
   "certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
@@ -72,4 +71,4 @@ echo
 
 
 echo "### Reloading nginx ..."
-docker-compose -f docker-compose.https.yml exec nginx nginx -s reload
+docker compose -f docker-compose.https.yml exec nginx nginx -s reload

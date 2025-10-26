@@ -1,5 +1,4 @@
 # Docker Compose untuk Deployment HTTPS
-version: '3.8'
 
 services:
   # Service Nginx sebagai Reverse Proxy
@@ -34,7 +33,6 @@ services:
       - mongo
     env_file:
       - ./.env
-    command: sh -c "npm run build && npm run seed && npm start"
 
   # Service untuk Database (MongoDB)
   mongo:
