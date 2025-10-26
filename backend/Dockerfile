@@ -36,11 +36,11 @@ WORKDIR /app
 COPY --from=dependencies /app/node_modules ./node_modules 
 
 # Salin kode yang sudah dicompile dari 'Builder Stage'
-COPY --from=builder /app/dist ./dist 
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
 
-# Salin file .env 
-COPY .env . 
-
+# Salin file .env
+COPY .env .
 # Container berjalan di port 3001 
 EXPOSE 3001 
 
