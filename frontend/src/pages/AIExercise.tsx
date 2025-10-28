@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModuleStore } from '../stores/moduleStore';
 import { useSessionStore } from '../stores/sessionStore';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { DifficultyLevel } from '../types';
 
 export default function AIExercise() {
@@ -39,7 +39,6 @@ export default function AIExercise() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <Sparkles size={32} className="text-white" />
         <h1 className="text-4xl font-bold text-white">AI Custom Exercise</h1>
       </div>
 
@@ -120,23 +119,11 @@ export default function AIExercise() {
               </>
             ) : (
               <>
-                <Sparkles size={20} />
                 <span>Generate Exercise</span>
               </>
             )}
           </button>
         </div>
-      </div>
-
-      <div className="mt-6 bg-[#1E1E1E] border border-[#333333] rounded-lg p-6">
-        <h3 className="text-white font-semibold mb-3">How it works:</h3>
-        <ol className="space-y-2 text-[#888888] text-sm list-decimal list-inside">
-          <li>Choose a module that matches what you want to practice</li>
-          <li>Select a difficulty level based on your current skill</li>
-          <li>Optionally provide specific instructions for problem generation</li>
-          <li>Click "Generate Exercise" and wait while AI creates 3 custom problems</li>
-          <li>Solve the problems at your own pace</li>
-        </ol>
       </div>
     </div>
   );
