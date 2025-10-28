@@ -372,7 +372,7 @@ export default function Workspace() {
       </div>
 
       <div className="flex-1 flex flex-col">
-        {sessionData.type === 'exam' && sessionData.problemScores && (
+        {sessionData.problemScores && (
           <WorkspaceHeader problemScores={sessionData.problemScores} problemIds={sessionData.problemIds.map(p => p._id)} />
         )}
         <div className="flex-1 relative">
