@@ -113,8 +113,6 @@ export default function ExamList() {
         <ul className="space-y-2 text-[#888888] text-sm list-disc list-inside">
           <li>Each exam consists of 3 problems related to the module</li>
           <li>You have 60 minutes to complete all problems</li>
-          <li>The timer continues running even if you close the browser</li>
-          <li>You can save your progress and return later</li>
           <li>Code will be auto-submitted when time expires</li>
           <li>Your best score will be used for the leaderboard</li>
         </ul>
