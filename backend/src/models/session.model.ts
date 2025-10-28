@@ -5,6 +5,7 @@ export interface ISubmission {
   problemId: Types.ObjectId;
   code: string;
   score: number;
+  nonSampleScore: number;
   submittedAt: Date;
 }
 
@@ -20,6 +21,10 @@ export interface ISession extends Document {
   submissions: ISubmission[];
   finalScore?: number;
   timeTakenSeconds?: number;
+  lastSubmissionResult?: {
+    problemId: Types.ObjectId;
+    result: object; // Store the raw result object
+  };
 }
 
 // Skema untuk Submission (sub-document)
@@ -34,6 +39,11 @@ const SubmissionSchema = new Schema<ISubmission>({
     required: true,
   },
   score: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  nonSampleScore: {
     type: Number,
     required: true,
     default: 0,
@@ -85,6 +95,13 @@ const SessionSchema = new Schema<ISession>({
   },
   timeTakenSeconds: {
     type: Number,
+  },
+  lastSubmissionResult: {
+    type: {
+      problemId: { type: Schema.Types.ObjectId, ref: 'Problem' },
+      result: { type: Object },
+    },
+    default: undefined,
   },
 });
 
