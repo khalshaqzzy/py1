@@ -92,17 +92,15 @@ export default function Workspace() {
     }
   }, [sessionId, isGrading, gradeExam, navigate]);
 
-  // Fetch session data
-  useEffect(() => {
-    const fetchSession = async () => {
-      if (!sessionId) return;
-      setIsLoading(true);
-      try {
-        const response = await api.get<ISession>(`/sessions/${sessionId}`);
-        const data = response.data;
-        setSessionData(data);
+  const fetchSession = useCallback(async () => {
+    if (!sessionId) return;
 
-        // Check for last submission result to display it on load
+    try {
+      const response = await api.get<ISession>(`/sessions/${sessionId}`);
+      const data = response.data;
+      setSessionData(data);
+
+      if (isLoading) {
         if (data.lastSubmissionResult) {
           const lastProblemId = data.lastSubmissionResult.problemId;
           const lastProblemIndex = data.problemIds.findIndex(p => p._id === lastProblemId);
@@ -112,15 +110,21 @@ export default function Workspace() {
           setSubmissionResult(data.lastSubmissionResult.result);
           setActiveTab('results');
         }
+      }
 
-      } catch {
-        setError('Failed to load session. Please ensure the session exists and you have access.');
-      } finally {
+    } catch {
+      setError('Failed to load session. Please ensure the session exists and you have access.');
+    } finally {
+      if (isLoading) {
         setIsLoading(false);
       }
-    };
+    }
+  }, [sessionId, isLoading]);
+
+  // Initial fetch
+  useEffect(() => {
     fetchSession();
-  }, [sessionId]);
+  }, [fetchSession]);
 
   // Timer effect
   const hasSubmitted = useRef(false);
@@ -143,7 +147,6 @@ export default function Workspace() {
     }
   }, [sessionData, handleGradeExam]);
 
-  // Code persistence effect
   useEffect(() => {
     if (problem) {
       const savedCode = localStorage.getItem(`code_${sessionId}_${problem._id}`);
@@ -179,6 +182,7 @@ export default function Workspace() {
         code,
       });
       setSubmissionResult(response.data);
+      fetchSession(); 
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         setSubmissionResult(err.response.data as ISubmissionResult);
