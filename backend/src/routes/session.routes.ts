@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createSession, getSession, getActiveSessions } from '../controllers/session.controller';
+import { createSession, getSession, getActiveSessions, getCompletedSessions } from '../controllers/session.controller';
 import { protect } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -10,6 +10,13 @@ const router = Router();
  * @access  Protected
  */
 router.get('/active', protect, getActiveSessions);
+
+/**
+ * @route   GET /api/sessions/completed
+ * @desc    Mengambil semua sesi yang telah selesai milik pengguna
+ * @access  Protected
+ */
+router.get('/completed', protect, getCompletedSessions);
 
 /**
  * @route   POST /api/sessions/create

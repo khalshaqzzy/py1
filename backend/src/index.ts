@@ -9,6 +9,7 @@ import sessionRoutes from './routes/session.routes';
 import submissionRoutes from './routes/submission.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import userRoutes from './routes/user.routes';
+import { startExpiredExamScheduler } from './services/cron.service';
 
 dotenv.config();
 
@@ -28,7 +29,10 @@ if (!dbURI) {
 }
 
 mongoose.connect(dbURI)
-  .then(() => console.log('Berhasil terhubung ke MongoDB...'))
+  .then(() => {
+    console.log('Berhasil terhubung ke MongoDB...');
+    startExpiredExamScheduler();
+  })
   .catch(err => console.error('Gagal terhubung ke MongoDB:', err));
 
 

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import api from '../services/api';
 import axios from 'axios';
 import { Clock, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { useSessionStore } from '../stores/sessionStore';
 
 interface ITestCase {
   input: string;
@@ -45,6 +46,9 @@ interface ISubmissionResult {
 
 export default function Workspace() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
+  const { gradeExam } = useSessionStore();
+
   const [sessionData, setSessionData] = useState<ISession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +58,28 @@ export default function Workspace() {
   const [activeTab, setActiveTab] = useState<'examples' | 'results'>('examples');
   const [submissionResult, setSubmissionResult] = useState<ISubmissionResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGrading, setIsGrading] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
 
   const problem = sessionData?.problemIds[currentProblemIndex];
+
+  const handleGradeExam = useCallback(async (isAutoSubmit = false) => {
+    if (!sessionId || isGrading) return;
+    setIsGrading(true);
+    try {
+      await gradeExam(sessionId);
+      if (isAutoSubmit) {
+        alert("Timer has finished and your exam has been submitted.");
+      }
+      navigate('/dashboard');
+    } catch (err) {
+      console.error("Failed to grade exam:", err);
+      setError("An error occurred while submitting the exam. Please try again.");
+    } finally {
+      setIsGrading(false);
+    }
+  }, [sessionId, isGrading, gradeExam, navigate]);
 
   // Fetch session data
   useEffect(() => {
@@ -76,20 +99,25 @@ export default function Workspace() {
   }, [sessionId]);
 
   // Timer effect
+  const hasSubmitted = useRef(false);
   useEffect(() => {
     if (sessionData?.type === 'exam' && sessionData.endTime) {
       const interval = setInterval(() => {
         const end = new Date(sessionData.endTime!).getTime();
         const now = new Date().getTime();
         const distance = end - now;
-        setTimeRemaining(Math.max(0, Math.floor(distance / 1000)));
-        if (distance < 0) {
+        const remaining = Math.max(0, Math.floor(distance / 1000));
+        setTimeRemaining(remaining);
+
+        if (remaining === 0 && !hasSubmitted.current) {
+          hasSubmitted.current = true;
           clearInterval(interval);
+          handleGradeExam(true); // Auto-submit
         }
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [sessionData]);
+  }, [sessionData, handleGradeExam]);
 
   // Code persistence effect
   useEffect(() => {
@@ -289,10 +317,15 @@ export default function Workspace() {
         <div className="flex-1 relative">
           <Editor height="100%" defaultLanguage="python" value={code} onChange={handleCodeChange} theme="vs-dark" options={{ minimap: { enabled: false }, fontSize: 14, fontFamily: 'JetBrains Mono, monospace', lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 4, insertSpaces: true }} />
         </div>
-        <div className="p-4 border-t border-[#333333] bg-[#1E1E1E]">
-          <button onClick={handleSubmit} disabled={isSubmitting} className="w-full bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        <div className="p-4 border-t border-[#333333] bg-[#1E1E1E] flex gap-4">
+          <button onClick={handleSubmit} disabled={isSubmitting || isGrading} className="flex-1 bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             {isSubmitting ? <><Loader2 className="animate-spin" /> Submitting...</> : 'Submit Code'}
           </button>
+          {sessionData.type === 'exam' && (
+            <button onClick={() => handleGradeExam(false)} disabled={isGrading || isSubmitting} className="flex-1 bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              {isGrading ? <><Loader2 className="animate-spin" /> Grading...</> : 'Finish & Grade Exam'}
+            </button>
+          )}
         </div>
       </div>
     </div>
