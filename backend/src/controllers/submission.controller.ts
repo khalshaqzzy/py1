@@ -3,6 +3,7 @@ import { IRequest } from '../middleware/auth.middleware';
 import Session from '../models/session.model';
 import Problem from '../models/problem.model';
 import { executeCodeInSandbox } from '../services/code-execution.service';
+import { gradeExamSession } from '../services/grading.service';
 
 /**
  * @route   POST /api/submit
@@ -75,29 +76,13 @@ export const submitCode = async (req: IRequest, res: Response) => {
 
     const finalScore = (score / testCases.length) * 100;
 
-    // 5. Simpan hasil submisi dan perbarui status sesi jika perlu
+    // 5. Simpan hasil submisi
     session.submissions.push({
       problemId,
       code,
       score: finalScore,
       submittedAt: new Date(),
     });
-
-    // Cek apakah sesi ujian telah selesai
-    if (session.type === 'exam') {
-      const submittedProblemIds = new Set(session.submissions.map(s => s.problemId.toString()));
-      if (submittedProblemIds.size === session.problemIds.length) {
-        session.status = 'completed';
-        
-        // Hitung skor akhir sesi (rata-rata dari semua skor submisi)
-        const totalScore = session.submissions.reduce((acc, s) => acc + s.score, 0);
-        session.finalScore = totalScore / session.submissions.length;
-
-        // Hitung total waktu pengerjaan dalam detik
-        const timeTaken = (new Date().getTime() - session.startTime.getTime()) / 1000;
-        session.timeTakenSeconds = Math.round(timeTaken);
-      }
-    }
 
     await session.save();
 
@@ -114,6 +99,47 @@ export const submitCode = async (req: IRequest, res: Response) => {
   } catch (error) {
     console.error('Server Error in submitCode:', error);
     let errorMessage = 'Terjadi kesalahan pada server saat memproses submisi.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    if (!res.headersSent) {
+      res.status(500).json({ message: errorMessage });
+    }
+  }
+};
+
+/**
+ * @route   POST /api/submit/:sessionId/grade
+ * @desc    Menilai keseluruhan sesi ujian dan menyelesaikannya
+ * @access  Protected
+ */
+export const gradeExam = async (req: IRequest, res: Response) => {
+  const { sessionId } = req.params;
+  const userId = req.user?.id;
+
+  try {
+    const session = await Session.findById(sessionId);
+
+    if (!session) {
+      return res.status(404).json({ message: 'Sesi tidak ditemukan.' });
+    }
+    if (session.userId.toString() !== userId) {
+      return res.status(403).json({ message: 'Akses ke sesi ini ditolak.' });
+    }
+    if (session.status !== 'in-progress') {
+      return res.status(400).json({ message: 'Sesi ini sudah selesai atau tidak valid.' });
+    }
+    if (session.type !== 'exam') {
+      return res.status(400).json({ message: 'Fungsi ini hanya untuk sesi ujian.' });
+    }
+
+    const gradedSession = await gradeExamSession(session);
+
+    res.status(200).json(gradedSession);
+
+  } catch (error) {
+    console.error('Server Error in gradeExam:', error);
+    let errorMessage = 'Terjadi kesalahan pada server saat menilai ujian.';
     if (error instanceof Error) {
       errorMessage = error.message;
     }

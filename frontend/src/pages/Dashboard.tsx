@@ -37,9 +37,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { modules, progress } = useModuleStore();
-  const { activeSessions } = useSessionStore();
+  const { activeSessions, completedSessions } = useSessionStore();
 
   const inProgressSessions = activeSessions.filter(s => s.status === 'in-progress');
+  const examResults = completedSessions.filter(s => s.type === 'exam');
+
 
 
   return (
@@ -85,6 +87,39 @@ export default function Dashboard() {
                     {session.problemIds.length} problems
                   </p>
                 </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {examResults.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-2xl font-semibold text-white mb-6">
+            Exam Results
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {examResults.map((session) => {
+              const module = modules.find(m => m.id === session.moduleId);
+              return (
+                <div
+                  key={session._id}
+                  className="bg-[#1E1E1E] border border-[#333333] rounded-lg p-6 text-left"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="text-[#888888] text-sm mb-1">Exam</p>
+                      <h3 className="text-white font-semibold text-lg">
+                        {module?.title || 'Loading...'}
+                      </h3>
+                    </div>
+                    <CheckCircle size={20} className="text-white" />
+                  </div>
+                  <div className="flex justify-between items-baseline">
+                     <p className="text-sm text-[#888888]">Score</p>
+                     <p className="text-2xl font-bold text-white">{session.finalScore ?? 0}/30</p>
+                  </div>
+                </div>
               )
             })}
           </div>
