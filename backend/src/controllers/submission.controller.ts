@@ -94,6 +94,15 @@ export const submitCode = async (req: IRequest, res: Response) => {
       submittedAt: new Date(),
     });
 
+    // Hitung kembali skor untuk semua soal untuk dikirim ke frontend
+    const problemScores: { [key: string]: number } = {};
+    for (const pId of session.problemIds) {
+      const lastSub = session.submissions
+        .filter(s => s.problemId.toString() === pId.toString())
+        .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime())[0];
+      problemScores[pId.toString()] = lastSub ? lastSub.nonSampleScore : 0;
+    }
+
     const resultPayload = {
       message: 'Submisi berhasil dinilai.',
       finalScore,
@@ -101,6 +110,7 @@ export const submitCode = async (req: IRequest, res: Response) => {
       passed_count: score,
       results,
       sessionStatus: session.status,
+      problemScores,
     };
 
     session.lastSubmissionResult = {

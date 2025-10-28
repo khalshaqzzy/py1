@@ -48,6 +48,7 @@ interface ISubmissionResult {
   sessionStatus: 'in-progress' | 'completed';
   message: string;
   status?: string;
+  problemScores?: { [key: string]: number };
 }
 
 export default function Workspace() {
@@ -185,8 +186,19 @@ export default function Workspace() {
         problemId: problem._id,
         code,
       });
-      setSubmissionResult(response.data);
-      fetchSession(); 
+      const resultData = response.data;
+      setSubmissionResult(resultData);
+
+      // Update session langsung dari response
+      if (resultData.problemScores) {
+        setSessionData(currentData => {
+          if (!currentData) return null;
+          return {
+            ...currentData,
+            problemScores: resultData.problemScores,
+          };
+        });
+      }
     } catch (err) {
       if (axios.isAxiosError(err) && err.response) {
         setSubmissionResult(err.response.data as ISubmissionResult);
