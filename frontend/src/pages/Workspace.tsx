@@ -5,6 +5,7 @@ import api from '../services/api';
 import axios from 'axios';
 import { Clock, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useSessionStore } from '../stores/sessionStore';
+import WorkspaceHeader from '../components/WorkspaceHeader';
 
 interface ITestCase {
   input: string;
@@ -27,6 +28,11 @@ interface ISession {
   problemIds: IProblem[];
   status: 'in-progress' | 'completed';
   endTime?: string;
+  problemScores?: { [key: string]: number };
+  lastSubmissionResult?: {
+    problemId: string;
+    result: ISubmissionResult;
+  };
 }
 
 interface ISubmissionResult {
@@ -60,12 +66,17 @@ export default function Workspace() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGrading, setIsGrading] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
-  const [showPopup, setShowPopup] = useState(false);
 
   const problem = sessionData?.problemIds[currentProblemIndex];
 
   const handleGradeExam = useCallback(async (isAutoSubmit = false) => {
     if (!sessionId || isGrading) return;
+
+    if (!isAutoSubmit) {
+      const confirmation = window.confirm('Are you sure you want to finish and submit your exam? This action cannot be undone.');
+      if (!confirmation) return;
+    }
+
     setIsGrading(true);
     try {
       await gradeExam(sessionId);
@@ -88,7 +99,20 @@ export default function Workspace() {
       setIsLoading(true);
       try {
         const response = await api.get<ISession>(`/sessions/${sessionId}`);
-        setSessionData(response.data);
+        const data = response.data;
+        setSessionData(data);
+
+        // Check for last submission result to display it on load
+        if (data.lastSubmissionResult) {
+          const lastProblemId = data.lastSubmissionResult.problemId;
+          const lastProblemIndex = data.problemIds.findIndex(p => p._id === lastProblemId);
+          if (lastProblemIndex !== -1) {
+            setCurrentProblemIndex(lastProblemIndex);
+          }
+          setSubmissionResult(data.lastSubmissionResult.result);
+          setActiveTab('results');
+        }
+
       } catch {
         setError('Failed to load session. Please ensure the session exists and you have access.');
       } finally {
@@ -192,9 +216,14 @@ export default function Workspace() {
       <div className="w-[40%] lg:w-[35%] border-r border-[#333333] overflow-y-auto bg-[#1E1E1E]">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">
-              Problem {currentProblemIndex + 1} of {sessionData.problemIds.length}
-            </h2>
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-xl font-semibold text-white">
+                Problem {currentProblemIndex + 1} of {sessionData.problemIds.length}
+              </h2>
+              <span className="text-sm font-mono text-gray-400">
+                (Score: {sessionData.problemScores?.[problem._id] ?? 0}/10)
+              </span>
+            </div>
             {sessionData.type === 'exam' && timeRemaining !== null && (
               <div className={`flex items-center gap-2 text-white font-mono text-lg ${timeRemaining < 300 ? 'text-red-400' : ''}`}>
                 <Clock size={20} />
@@ -298,34 +327,41 @@ export default function Workspace() {
             </div>
           </div>
 
-          {sessionData.problemIds.length > 1 && (
-            <div className="flex gap-2 mt-6">
-              <button onClick={() => setCurrentProblemIndex(Math.max(0, currentProblemIndex - 1))} disabled={currentProblemIndex === 0} className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-[#333333] rounded-lg text-[#EAEAEA] hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <ChevronLeft size={16} />
-                Previous
-              </button>
-              <button onClick={() => setCurrentProblemIndex(Math.min(sessionData.problemIds.length - 1, currentProblemIndex + 1))} disabled={currentProblemIndex === sessionData.problemIds.length - 1} className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-[#333333] rounded-lg text-[#EAEAEA] hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                Next
-                <ChevronRight size={16} />
-              </button>
+          <div className="flex justify-between items-center mt-6">
+            <div className="flex gap-2">
+                {sessionData.problemIds.length > 1 && (
+                    <>
+                        <button onClick={() => setCurrentProblemIndex(Math.max(0, currentProblemIndex - 1))} disabled={currentProblemIndex === 0} className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-[#333333] rounded-lg text-[#EAEAEA] hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <ChevronLeft size={16} />
+                            Previous
+                        </button>
+                        <button onClick={() => setCurrentProblemIndex(Math.min(sessionData.problemIds.length - 1, currentProblemIndex + 1))} disabled={currentProblemIndex === sessionData.problemIds.length - 1} className="flex items-center gap-2 px-4 py-2 bg-[#121212] border border-[#333333] rounded-lg text-[#EAEAEA] hover:border-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            Next
+                            <ChevronRight size={16} />
+                        </button>
+                    </>
+                )}
             </div>
-          )}
+            {sessionData.type === 'exam' && (
+              <button onClick={() => handleGradeExam(false)} disabled={isGrading || isSubmitting} className="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {isGrading ? <><Loader2 className="animate-spin" /> Grading...</> : 'Finish & Grade Exam'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col">
+        {sessionData.type === 'exam' && sessionData.problemScores && (
+          <WorkspaceHeader problemScores={sessionData.problemScores} problemIds={sessionData.problemIds.map(p => p._id)} />
+        )}
         <div className="flex-1 relative">
           <Editor height="100%" defaultLanguage="python" value={code} onChange={handleCodeChange} theme="vs-dark" options={{ minimap: { enabled: false }, fontSize: 14, fontFamily: 'JetBrains Mono, monospace', lineNumbers: 'on', scrollBeyondLastLine: false, automaticLayout: true, tabSize: 4, insertSpaces: true }} />
         </div>
-        <div className="p-4 border-t border-[#333333] bg-[#1E1E1E] flex gap-4">
-          <button onClick={handleSubmit} disabled={isSubmitting || isGrading} className="flex-1 bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        <div className="p-4 border-t border-[#333333] bg-[#1E1E1E]">
+          <button onClick={handleSubmit} disabled={isSubmitting || isGrading} className="w-full bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
             {isSubmitting ? <><Loader2 className="animate-spin" /> Submitting...</> : 'Submit Code'}
           </button>
-          {sessionData.type === 'exam' && (
-            <button onClick={() => handleGradeExam(false)} disabled={isGrading || isSubmitting} className="flex-1 bg-green-600 text-white font-semibold py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-              {isGrading ? <><Loader2 className="animate-spin" /> Grading...</> : 'Finish & Grade Exam'}
-            </button>
-          )}
         </div>
       </div>
     </div>

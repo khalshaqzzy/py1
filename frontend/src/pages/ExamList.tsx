@@ -7,13 +7,25 @@ import { Clock, CheckCircle, Loader2 } from 'lucide-react';
 export default function ExamList() {
   const navigate = useNavigate();
   const { modules } = useModuleStore();
-  const { activeSessions, createSession } = useSessionStore();
+  const { activeSessions, completedSessions, createSession } = useSessionStore();
   const [loadingModuleId, setLoadingModuleId] = useState<number | null>(null);
 
   const getExamStatus = (moduleId: number) => {
-    return activeSessions.find(
+    const active = activeSessions.find(
       (session) => session.type === 'exam' && session.moduleId === moduleId
     );
+    if (active) return { status: 'in-progress', session: active };
+
+    const completedExams = completedSessions.filter(
+      (session) => session.type === 'exam' && session.moduleId === moduleId
+    );
+
+    if (completedExams.length > 0) {
+      const highestScore = Math.max(...completedExams.map(e => e.finalScore ?? 0));
+      return { status: 'completed', highestScore };
+    }
+
+    return { status: 'not-started' };
   };
 
   const handleStartExam = async (moduleId: number) => {
@@ -34,9 +46,9 @@ export default function ExamList() {
 
       <div className="space-y-6">
         {modules.map((module) => {
-          const existingSession = getExamStatus(module.id);
-          const isCompleted = existingSession?.status === 'completed';
-          const isInProgress = existingSession?.status === 'in-progress';
+          const examStatus = getExamStatus(module.id);
+          const isInProgress = examStatus.status === 'in-progress';
+          const isCompleted = examStatus.status === 'completed';
           const isLoading = loadingModuleId === module.id;
 
           return (
@@ -61,29 +73,27 @@ export default function ExamList() {
                   </div>
                 </div>
                 {isCompleted && (
-                  <CheckCircle size={24} className="text-white ml-4" />
+                  <div className="text-right ml-4">
+                    <p className="text-sm text-[#888888]">Best Score</p>
+                    <p className="text-3xl font-bold text-white">{examStatus.highestScore}/30</p>
+                  </div>
                 )}
               </div>
 
               {isInProgress ? (
                 <button
-                  onClick={() => navigate(`/workspace/exam/${existingSession._id}`)}
+                  onClick={() => navigate(`/workspace/exam/${examStatus.session?._id}`)}
                   className="w-full bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform"
                 >
                   Continue Exam
                 </button>
               ) : isCompleted ? (
-                <div className="flex gap-3">
-                  <button className="flex-1 bg-[#121212] text-[#EAEAEA] font-semibold py-3 rounded-lg border border-[#333333] hover:border-white transition-colors">
-                    View Results
-                  </button>
-                  <button 
-                    onClick={() => handleStartExam(module.id)}
-                    disabled={isLoading}
-                    className="flex-1 bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform disabled:opacity-50 flex justify-center items-center gap-2">
-                    {isLoading ? <><Loader2 className="animate-spin"/> Starting...</> : 'Retake Exam'}
-                  </button>
-                </div>
+                <button 
+                  onClick={() => handleStartExam(module.id)}
+                  disabled={isLoading}
+                  className="w-full bg-white text-[#121212] font-semibold py-3 rounded-lg hover:scale-[1.01] transition-transform disabled:opacity-50 flex justify-center items-center gap-2">
+                  {isLoading ? <><Loader2 className="animate-spin"/> Starting...</> : 'Retake Exam'}
+                </button>
               ) : (
                 <button
                   onClick={() => handleStartExam(module.id)}
