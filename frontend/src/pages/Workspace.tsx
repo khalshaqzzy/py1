@@ -149,9 +149,13 @@ export default function Workspace() {
       const savedCode = localStorage.getItem(`code_${sessionId}_${problem._id}`);
       setCode(savedCode || '# Write your solution here\n');
     }
+  }, [problem, sessionId]);
+
+  // View reset effect when problem changes
+  useEffect(() => {
     setSubmissionResult(null);
     setActiveTab('examples');
-  }, [currentProblemIndex, problem, sessionId]);
+  }, [currentProblemIndex]);
 
   const handleCodeChange = (value: string | undefined) => {
     const newCode = value || '';
