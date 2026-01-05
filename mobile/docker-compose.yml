@@ -1,0 +1,18 @@
+services:
+  expo:
+    build: .
+    volumes:
+      - .:/app
+      - node_modules_vol:/app/node_modules
+      - expo_cache_vol:/app/.expo
+    ports:
+      - "8081:8081"
+    environment:
+      - EXPO_PUBLIC_API_URL=https://cryptoalpha.site/api
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+
+volumes:
+  node_modules_vol:
+  expo_cache_vol:

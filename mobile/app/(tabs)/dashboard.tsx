@@ -1,16 +1,16 @@
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useAuthStore } from '../../src/stores/authStore';
 import { useModuleStore } from '../../src/stores/moduleStore';
 import { useSessionStore } from '../../src/stores/sessionStore';
-import { Clock, CheckCircle, Sparkles, ChevronRight, FileText } from 'lucide-react-native';
+import { Clock, CheckCircle, Sparkles, ChevronRight, FileText, LogOut } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { modules, progress, fetchModules, fetchProgress } = useModuleStore();
-  const { activeSessions, fetchActiveSessions } = useSessionStore();
+  const { activeSessions, completedSessions, fetchActiveSessions, fetchCompletedSessions } = useSessionStore();
   
   const [refreshing, setRefreshing] = useState(false);
 
@@ -19,12 +19,28 @@ export default function Dashboard() {
     await Promise.all([
       fetchModules(),
       fetchProgress(),
-      fetchActiveSessions()
+      fetchActiveSessions(),
+      fetchCompletedSessions()
     ]);
     setRefreshing(false);
   }, []);
 
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Logout', 
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/login');
+        }
+      },
+    ]);
+  };
+
   const inProgressSessions = activeSessions.filter(s => s.status === 'in-progress');
+  const examResults = completedSessions.filter(s => s.type === 'exam');
 
   return (
     <ScrollView 
@@ -34,9 +50,14 @@ export default function Dashboard() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
       }
     >
-      <View className="mb-8">
-        <Text className="text-gray-400 text-lg">Hello,</Text>
-        <Text className="text-white text-3xl font-bold">{user?.username || 'Student'}!</Text>
+      <View className="mb-8 flex-row justify-between items-start">
+        <View>
+          <Text className="text-gray-400 text-lg">Hello,</Text>
+          <Text className="text-white text-3xl font-bold">{user?.username || 'Student'}!</Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} className="p-2 bg-[#1E1E1E] rounded-full border border-[#333]">
+          <LogOut size={20} color="#F87171" />
+        </TouchableOpacity>
       </View>
 
       {/* Continue Your Work */}
@@ -66,6 +87,35 @@ export default function Dashboard() {
                     {session.problemIds.length} problems
                   </Text>
                 </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Exam Results */}
+      {examResults.length > 0 && (
+        <View className="mb-8">
+          <Text className="text-white text-xl font-bold mb-4">Exam Results</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+            {examResults.map((session) => {
+              const module = modules.find(m => m.id === session.moduleId);
+              return (
+                <View
+                  key={session._id}
+                  className="bg-[#1E1E1E] border border-[#333333] rounded-2xl p-5 mr-4 w-48"
+                >
+                  <View className="flex-row justify-between items-center mb-3">
+                    <CheckCircle size={16} color="#4ADE80" />
+                    <Text className="text-white font-mono font-bold">{session.finalScore}/30</Text>
+                  </View>
+                  <Text className="text-gray-300 font-bold text-sm mb-1" numberOfLines={1}>
+                    {module?.title || 'Exam'}
+                  </Text>
+                  <Text className="text-gray-500 text-xs">
+                    {new Date(session.startTime).toLocaleDateString()}
+                  </Text>
+                </View>
               );
             })}
           </ScrollView>

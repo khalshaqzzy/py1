@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, useWindowDimensions, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, useWindowDimensions, TouchableOpacity, ActivityIndicator, SafeAreaView, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../../src/services/api';
 import CodeEditor from '../../../src/components/CodeEditor';
-import { Play, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, XCircle } from 'lucide-react-native';
+import { Play, ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, XCircle, Clock } from 'lucide-react-native';
 import { useSessionStore } from '../../../src/stores/sessionStore';
 
 // --- TYPES ---
@@ -48,11 +49,19 @@ export default function WorkspaceScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<any>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
 
   const fetchSession = async () => {
     try {
       const response = await api.get(`/sessions/${sessionId}`);
-      setSession(response.data);
+      const data = response.data;
+      setSession(data);
+      
+      // Load saved draft code for current problem
+      const draft = await AsyncStorage.getItem(`draft_${sessionId}_${data.problemIds[currentProblemIdx]._id}`);
+      if (draft) setCode(draft);
+      else setCode('# Write your solution here\n');
+
     } catch (error) {
       console.error('Failed to fetch session:', error);
     } finally {
@@ -62,7 +71,62 @@ export default function WorkspaceScreen() {
 
   useEffect(() => {
     fetchSession();
-  }, [sessionId]);
+  }, [sessionId, currentProblemIdx]);
+
+  // Timer Effect
+  useEffect(() => {
+    if (session?.type === 'exam' && (session as any).endTime) {
+      const interval = setInterval(() => {
+        const end = new Date((session as any).endTime).getTime();
+        const now = new Date().getTime();
+        const remaining = Math.max(0, Math.floor((end - now) / 1000));
+        setTimeRemaining(remaining);
+
+        if (remaining === 0) {
+          clearInterval(interval);
+          handleGradeExam(true); // Auto-submit
+        }
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
+
+  const handleCodeChange = async (newCode: string) => {
+    setCode(newCode);
+    if (session) {
+      await AsyncStorage.setItem(`draft_${sessionId}_${session.problemIds[currentProblemIdx]._id}`, newCode);
+    }
+  };
+
+  const handleGradeExam = async (isAuto = false) => {
+    const performSubmit = async () => {
+      try {
+        await api.post(`/submit/${sessionId}/grade`);
+        router.replace('/dashboard');
+      } catch (error) {
+        console.error('Final grading failed:', error);
+      }
+    };
+
+    if (isAuto) {
+      performSubmit();
+    } else {
+      Alert.alert(
+        'Finish Exam',
+        'Are you sure you want to submit your exam? This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Submit', onPress: performSubmit }
+        ]
+      );
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleSubmit = async () => {
     if (!session) return;
@@ -135,8 +199,25 @@ export default function WorkspaceScreen() {
 
   const EditorView = () => (
     <View className="flex-1 bg-[#121212]">
-      <CodeEditor code={code} onChange={setCode} />
+      <CodeEditor code={code} onChange={handleCodeChange} />
       <View className="p-4 bg-[#1E1E1E] border-t border-[#333]">
+        <View className="flex-row gap-3 mb-4">
+          <TouchableOpacity 
+            onPress={() => setCurrentProblemIdx(Math.max(0, currentProblemIdx - 1))}
+            disabled={currentProblemIdx === 0}
+            className="flex-1 bg-[#121212] border border-[#333] py-3 rounded-xl items-center disabled:opacity-30"
+          >
+            <Text className="text-white font-bold">Previous</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setCurrentProblemIdx(Math.min(session.problemIds.length - 1, currentProblemIdx + 1))}
+            disabled={currentProblemIdx === session.problemIds.length - 1}
+            className="flex-1 bg-[#121212] border border-[#333] py-3 rounded-xl items-center disabled:opacity-30"
+          >
+            <Text className="text-white font-bold">Next</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity 
           onPress={handleSubmit}
           disabled={isSubmitting}
@@ -209,8 +290,24 @@ export default function WorkspaceScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <ChevronLeft size={24} color="#fff" />
         </TouchableOpacity>
-        <Text className="text-white font-bold text-lg">Workspace</Text>
-        <View className="w-6" />
+        
+        <View className="items-center">
+          <Text className="text-white font-bold text-lg">Workspace</Text>
+          {timeRemaining !== null && (
+            <View className="flex-row items-center gap-1">
+              <Clock size={12} color={timeRemaining < 300 ? "#F87171" : "#888"} />
+              <Text className={`text-xs font-mono ${timeRemaining < 300 ? "text-red-400" : "text-gray-400"}`}>
+                {formatTime(timeRemaining)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {session.type === 'exam' ? (
+          <TouchableOpacity onPress={() => handleGradeExam(false)}>
+            <Text className="text-green-500 font-bold">Grade</Text>
+          </TouchableOpacity>
+        ) : <View className="w-6" />}
       </View>
 
       <TabView
