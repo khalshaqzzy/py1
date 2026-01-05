@@ -91,14 +91,14 @@ export default function WorkspaceScreen() {
     }
   }, [session]);
 
-  const handleCodeChange = async (newCode: string) => {
+  const handleCodeChange = useCallback(async (newCode: string) => {
     setCode(newCode);
     if (session) {
       await AsyncStorage.setItem(`draft_${sessionId}_${session.problemIds[currentProblemIdx]._id}`, newCode);
     }
-  };
+  }, [sessionId, currentProblemIdx, session]);
 
-  const handleGradeExam = async (isAuto = false) => {
+  const handleGradeExam = useCallback(async (isAuto = false) => {
     const performSubmit = async () => {
       try {
         await api.post(`/submit/${sessionId}/grade`);
@@ -120,7 +120,7 @@ export default function WorkspaceScreen() {
         ]
       );
     }
-  };
+  }, [sessionId, router]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -128,7 +128,7 @@ export default function WorkspaceScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!session) return;
     const problem = session.problemIds[currentProblemIdx];
     
@@ -151,7 +151,7 @@ export default function WorkspaceScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [session, currentProblemIdx, sessionId, code]);
 
   if (isLoading || !session) {
     return (
@@ -163,126 +163,127 @@ export default function WorkspaceScreen() {
 
   const problem = session.problemIds[currentProblemIdx];
 
-  // --- VIEWS ---
-  const ProblemView = () => (
-    <ScrollView className="flex-1 p-6 bg-[#121212]">
-      <Text className="text-white text-2xl font-bold mb-4">
-        Problem {currentProblemIdx + 1} of {session.problemIds.length}
-      </Text>
-      <Text className="text-[#EAEAEA] text-lg leading-7 mb-6">
-        {problem.description.replace(/<br\s*\/?>/gi, '\n')}
-      </Text>
-      
-      {problem.bannedFunctions.length > 0 && (
-        <View className="bg-red-950/20 border border-red-900/50 p-4 rounded-xl mb-6 flex-row gap-3">
-          <AlertCircle size={20} color="#f87171" />
-          <View className="flex-1">
-            <Text className="text-red-400 font-bold mb-1">Banned Functions</Text>
-            <Text className="text-red-400/80 text-sm">
-              You cannot use: {problem.bannedFunctions.join(', ')}
+  // --- STABLE SCENES ---
+  const renderScene = useCallback(({ route }: any) => {
+    switch (route.key) {
+      case 'problem':
+        return (
+          <ScrollView className="flex-1 p-6 bg-[#121212]">
+            <Text className="text-white text-2xl font-bold mb-4">
+              Problem {currentProblemIdx + 1} of {session.problemIds.length}
             </Text>
-          </View>
-        </View>
-      )}
+            <Text className="text-[#EAEAEA] text-lg leading-7 mb-6">
+              {problem.description.replace(/<br\s*\/?>/gi, '\n')}
+            </Text>
+            
+            {problem.bannedFunctions.length > 0 && (
+              <View className="bg-red-950/20 border border-red-900/50 p-4 rounded-xl mb-6 flex-row gap-3">
+                <AlertCircle size={20} color="#f87171" />
+                <View className="flex-1">
+                  <Text className="text-red-400 font-bold mb-1">Banned Functions</Text>
+                  <Text className="text-red-400/80 text-sm">
+                    You cannot use: {problem.bannedFunctions.join(', ')}
+                  </Text>
+                </View>
+              </View>
+            )}
 
-      <Text className="text-white font-bold text-lg mb-3">Example Cases</Text>
-      {problem.testCases.filter(tc => tc.isExample).map((tc, i) => (
-        <View key={i} className="bg-[#1E1E1E] p-4 rounded-xl mb-4 border border-[#333]">
-          <Text className="text-gray-500 font-bold text-xs uppercase mb-1">Input</Text>
-          <Text className="text-white font-mono mb-3">{tc.input}</Text>
-          <Text className="text-gray-500 font-bold text-xs uppercase mb-1">Expected Output</Text>
-          <Text className="text-green-400 font-mono">{tc.expectedOutput}</Text>
-        </View>
-      ))}
-    </ScrollView>
-  );
+            <Text className="text-white font-bold text-lg mb-3">Example Cases</Text>
+            {problem.testCases.filter(tc => tc.isExample).map((tc, i) => (
+              <View key={i} className="bg-[#1E1E1E] p-4 rounded-xl mb-4 border border-[#333]">
+                <Text className="text-gray-500 font-bold text-xs uppercase mb-1">Input</Text>
+                <Text className="text-white font-mono mb-3">{tc.input}</Text>
+                <Text className="text-gray-500 font-bold text-xs uppercase mb-1">Expected Output</Text>
+                <Text className="text-green-400 font-mono">{tc.expectedOutput}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        );
+      case 'editor':
+        return (
+          <View className="flex-1 bg-[#121212]">
+            <CodeEditor code={code} onChange={handleCodeChange} />
+            <View className="p-4 bg-[#1E1E1E] border-t border-[#333]">
+              <View className="flex-row gap-3 mb-4">
+                <TouchableOpacity 
+                  onPress={() => setCurrentProblemIdx(Math.max(0, currentProblemIdx - 1))}
+                  disabled={currentProblemIdx === 0}
+                  className="flex-1 bg-[#121212] border border-[#333] py-3 rounded-xl items-center disabled:opacity-30"
+                >
+                  <Text className="text-white font-bold">Previous</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setCurrentProblemIdx(Math.min(session.problemIds.length - 1, currentProblemIdx + 1))}
+                  disabled={currentProblemIdx === session.problemIds.length - 1}
+                  className="flex-1 bg-[#121212] border border-[#333] py-3 rounded-xl items-center disabled:opacity-30"
+                >
+                  <Text className="text-white font-bold">Next</Text>
+                </TouchableOpacity>
+              </View>
 
-  const EditorView = () => (
-    <View className="flex-1 bg-[#121212]">
-      <CodeEditor code={code} onChange={handleCodeChange} />
-      <View className="p-4 bg-[#1E1E1E] border-t border-[#333]">
-        <View className="flex-row gap-3 mb-4">
-          <TouchableOpacity 
-            onPress={() => setCurrentProblemIdx(Math.max(0, currentProblemIdx - 1))}
-            disabled={currentProblemIdx === 0}
-            className="flex-1 bg-[#121212] border border-[#333] py-3 rounded-xl items-center disabled:opacity-30"
-          >
-            <Text className="text-white font-bold">Previous</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => setCurrentProblemIdx(Math.min(session.problemIds.length - 1, currentProblemIdx + 1))}
-            disabled={currentProblemIdx === session.problemIds.length - 1}
-            className="flex-1 bg-[#121212] border border-[#333] py-3 rounded-xl items-center disabled:opacity-30"
-          >
-            <Text className="text-white font-bold">Next</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity 
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-          className="bg-white py-4 rounded-2xl flex-row justify-center items-center gap-2"
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#121212" />
-          ) : (
-            <>
-              <Play size={20} color="#121212" fill="#121212" />
-              <Text className="text-[#121212] font-bold text-lg">Run & Submit</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  const ResultsView = () => (
-    <ScrollView className="flex-1 p-6 bg-[#121212]">
-      {!submissionResult ? (
-        <View className="items-center justify-center py-20">
-          <Play size={48} color="#333" />
-          <Text className="text-gray-500 mt-4">Run your code to see results.</Text>
-        </View>
-      ) : (
-        <View>
-          <View className={`p-6 rounded-2xl mb-6 flex-row items-center gap-4 ${ 
-            submissionResult.passed_count === submissionResult.totalTestCases 
-            ? 'bg-green-950/30 border border-green-900' 
-            : 'bg-red-950/30 border border-red-900'
-          }`}>
-            {submissionResult.passed_count === submissionResult.totalTestCases 
-              ? <CheckCircle2 size={32} color="#4ADE80" />
-              : <XCircle size={32} color="#F87171" />
-            }
-            <View>
-              <Text className="text-white font-bold text-xl">
-                {submissionResult.passed_count} / {submissionResult.totalTestCases} Passed
-              </Text>
-              <Text className="text-gray-400">{submissionResult.message}</Text>
+              <TouchableOpacity 
+                onPress={handleSubmit}
+                disabled={isSubmitting}
+                className="bg-white py-4 rounded-2xl flex-row justify-center items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#121212" />
+                ) : (
+                  <>
+                    <Play size={20} color="#121212" fill="#121212" />
+                    <Text className="text-[#121212] font-bold text-lg">Run & Submit</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
+        );
+      case 'results':
+        return (
+          <ScrollView className="flex-1 p-6 bg-[#121212]">
+            {!submissionResult ? (
+              <View className="items-center justify-center py-20">
+                <Play size={48} color="#333" />
+                <Text className="text-gray-500 mt-4">Run your code to see results.</Text>
+              </View>
+            ) : (
+              <View>
+                <View className={`p-6 rounded-2xl mb-6 flex-row items-center gap-4 ${ 
+                  submissionResult.passed_count === submissionResult.totalTestCases 
+                  ? 'bg-green-950/30 border border-green-900' 
+                  : 'bg-red-950/30 border border-red-900'
+                }`}>
+                  {submissionResult.passed_count === submissionResult.totalTestCases 
+                    ? <CheckCircle2 size={32} color="#4ADE80" />
+                    : <XCircle size={32} color="#F87171" />
+                  }
+                  <View>
+                    <Text className="text-white font-bold text-xl">
+                      {submissionResult.passed_count} / {submissionResult.totalTestCases} Passed
+                    </Text>
+                    <Text className="text-gray-400">{submissionResult.message}</Text>
+                  </View>
+                </View>
 
-          {submissionResult.results?.filter((r: any) => !r.passed).map((res: any, i: number) => (
-            <View key={i} className="bg-[#1E1E1E] p-5 rounded-2xl mb-4 border border-red-900/30">
-              <Text className="text-red-400 font-bold mb-3">Failed Test Case {i + 1}</Text>
-              <Text className="text-gray-500 text-xs font-bold uppercase">Input</Text>
-              <Text className="text-white font-mono mb-3">{res.testCase.input}</Text>
-              <Text className="text-gray-500 text-xs font-bold uppercase">Expected</Text>
-              <Text className="text-green-400 font-mono mb-3">{res.testCase.expectedOutput}</Text>
-              <Text className="text-gray-500 text-xs font-bold uppercase">Your Output</Text>
-              <Text className="text-red-400 font-mono">{res.actualOutput || '(No output)'}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
-  );
-
-  const renderScene = SceneMap({
-    problem: ProblemView,
-    editor: EditorView,
-    results: ResultsView,
-  });
+                {submissionResult.results?.filter((r: any) => !r.passed).map((res: any, i: number) => (
+                  <View key={i} className="bg-[#1E1E1E] p-5 rounded-2xl mb-4 border border-red-900/30">
+                    <Text className="text-red-400 font-bold mb-3">Failed Test Case {i + 1}</Text>
+                    <Text className="text-gray-500 text-xs font-bold uppercase">Input</Text>
+                    <Text className="text-white font-mono mb-3">{res.testCase.input}</Text>
+                    <Text className="text-gray-500 text-xs font-bold uppercase">Expected</Text>
+                    <Text className="text-green-400 font-mono mb-3">{res.testCase.expectedOutput}</Text>
+                    <Text className="text-gray-500 text-xs font-bold uppercase">Your Output</Text>
+                    <Text className="text-red-400 font-mono">{res.actualOutput || '(No output)'}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+        );
+      default:
+        return null;
+    }
+  }, [session, currentProblemIdx, code, isSubmitting, submissionResult, handleCodeChange, handleSubmit]);
 
   return (
     <SafeAreaView className="flex-1 bg-[#1E1E1E]">
