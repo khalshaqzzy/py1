@@ -1,0 +1,23 @@
+# Ignore other projects in the monorepo
+/backend
+/frontend
+/assets
+/internals
+/errors
+
+# Standard Expo/RN ignores
+node_modules
+.expo
+dist
+web-build
+build
+*.apk
+*.aab
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sensitive files
+.env
+.env.local
