@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Platform } from 'react-native';
+import React, { useRef, useMemo } from 'react';
+import { View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 interface CodeEditorProps {
@@ -10,9 +10,12 @@ interface CodeEditorProps {
 
 export default function CodeEditor({ code, onChange, language = 'python' }: CodeEditorProps) {
   const webViewRef = useRef<WebView>(null);
+  
+  // Ambil nilai code awal saat mount untuk dimasukkan ke HTML
+  const initialCode = useRef(code);
 
-  // HTML content with a simple CodeMirror instance
-  const htmlContent = `
+  // Buat HTML statis (referensi tetap selama CodeEditor tidak unmount)
+  const htmlContent = useMemo(() => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -44,7 +47,8 @@ export default function CodeEditor({ code, onChange, language = 'python' }: Code
           }
         });
 
-        editor.setValue(` + "`" + `${code.replace(/`/g, '\\`').replace(/\${/g, '\\${')}` + "`" + `);
+        // Set nilai awal hanya sekali
+        editor.setValue(${JSON.stringify(initialCode.current)});
 
         editor.on('change', function() {
           window.ReactNativeWebView.postMessage(editor.getValue());
@@ -52,13 +56,16 @@ export default function CodeEditor({ code, onChange, language = 'python' }: Code
       </script>
     </body>
     </html>
-  `;
+  `, []); // Dependency array kosong agar HTML tidak pernah berubah
+
+  // Memoize source object agar referensinya tetap
+  const source = useMemo(() => ({ html: htmlContent }), [htmlContent]);
 
   return (
     <View className="flex-1 bg-[#121212]">
       <WebView
         ref={webViewRef}
-        source={{ html: htmlContent }}
+        source={source}
         onMessage={(event) => {
           onChange(event.nativeEvent.data);
         }}

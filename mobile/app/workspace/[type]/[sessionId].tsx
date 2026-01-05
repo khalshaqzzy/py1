@@ -195,7 +195,11 @@ export default function WorkspaceScreen() {
       case 'editor':
         return (
           <View className="flex-1 bg-[#121212]">
-            <CodeEditor code={code} onChange={handleCodeChange} />
+            <CodeEditor 
+              key={currentProblemIdx}
+              code={code} 
+              onChange={handleCodeChange} 
+            />
             <View className="p-4 bg-[#1E1E1E] border-t border-[#333]">
               <View className="flex-row gap-3 mb-4">
                 <TouchableOpacity 
