@@ -153,18 +153,11 @@ export default function WorkspaceScreen() {
     }
   }, [session, currentProblemIdx, sessionId, code]);
 
-  if (isLoading || !session) {
-    return (
-      <View className="flex-1 bg-[#121212] items-center justify-center">
-        <ActivityIndicator color="#fff" size="large" />
-      </View>
-    );
-  }
-
-  const problem = session.problemIds[currentProblemIdx];
-
   // --- STABLE SCENES ---
   const renderScene = useCallback(({ route }: any) => {
+    if (!session) return null;
+    const problem = session.problemIds[currentProblemIdx];
+
     switch (route.key) {
       case 'problem':
         return (
@@ -173,7 +166,7 @@ export default function WorkspaceScreen() {
               Problem {currentProblemIdx + 1} of {session.problemIds.length}
             </Text>
             <Text className="text-[#EAEAEA] text-lg leading-7 mb-6">
-              {problem.description.replace(/<br\s*\/?>/gi, '\n')}
+              {problem.description.replace(/<br\s*\/?\?>/gi, '\n')}
             </Text>
             
             {problem.bannedFunctions.length > 0 && (
@@ -284,6 +277,14 @@ export default function WorkspaceScreen() {
         return null;
     }
   }, [session, currentProblemIdx, code, isSubmitting, submissionResult, handleCodeChange, handleSubmit]);
+
+  if (isLoading || !session) {
+    return (
+      <View className="flex-1 bg-[#121212] items-center justify-center">
+        <ActivityIndicator color="#fff" size="large" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#1E1E1E]">
