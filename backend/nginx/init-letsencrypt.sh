@@ -4,9 +4,9 @@ if ! docker compose version &> /dev/null; then
   exit 1
 fi
 
-domains=(khalshaqzzy.site www.khalshaqzzy.site)
+domains=(cryptoalpha.site www.cryptoalpha.site)
 rsa_key_size=4096
-email="khalshaqzzy@gmail.com"
+email="cryptoalpha@gmail.com"
 data_path="./data/certbot"
 
 if [ -d "$data_path" ]; then
@@ -25,12 +25,12 @@ if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ] || [ ! -e "$data_path/conf/
   echo
 fi
 
-echo "### Creating dummy certificate for khalshaqzzy.site ..."
-mkdir -p "$data_path/conf/live/khalshaqzzy.site"
+echo "### Creating dummy certificate for cryptoalpha.site ..."
+mkdir -p "$data_path/conf/live/cryptoalpha.site"
 docker compose -f docker-compose.https.yml run --rm --entrypoint \
   "openssl req -x509 -nodes -newkey rsa:2048 -days 1\
-    -keyout '/etc/letsencrypt/live/khalshaqzzy.site/privkey.pem' \
-    -out '/etc/letsencrypt/live/khalshaqzzy.site/fullchain.pem' \
+    -keyout '/etc/letsencrypt/live/cryptoalpha.site/privkey.pem' \
+    -out '/etc/letsencrypt/live/cryptoalpha.site/fullchain.pem' \
     -subj '/CN=localhost'" certbot
 echo
 
@@ -39,11 +39,11 @@ echo "### Starting nginx ..."
 docker compose -f docker-compose.https.yml up --force-recreate -d nginx
 echo
 
-echo "### Deleting dummy certificate for khalshaqzzy.site ..."
+echo "### Deleting dummy certificate for cryptoalpha.site ..."
 docker compose -f docker-compose.https.yml run --rm --entrypoint \
-  "rm -Rf /etc/letsencrypt/live/khalshaqzzy.site && \
-   rm -Rf /etc/letsencrypt/archive/khalshaqzzy.site && \
-   rm -Rf /etc/letsencrypt/renewal/khalshaqzzy.site.conf" certbot
+  "rm -Rf /etc/letsencrypt/live/cryptoalpha.site && \
+   rm -Rf /etc/letsencrypt/archive/cryptoalpha.site && \
+   rm -Rf /etc/letsencrypt/renewal/cryptoalpha.site.conf" certbot
 echo
 
 
